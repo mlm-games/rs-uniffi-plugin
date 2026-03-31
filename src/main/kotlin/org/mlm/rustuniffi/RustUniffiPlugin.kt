@@ -1,11 +1,48 @@
 package org.mlm.rustuniffi
 
+import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryTarget
+import com.android.build.api.dsl.LibraryExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Copy
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.mlm.rustuniffi.tasks.*
+import java.io.File
+
+private fun Project.extractBundledJnaRules(): File {
+    val out = layout.buildDirectory.file("rust-uniffi/jna-consumer-rules.pro").get().asFile
+    if (!out.exists()) {
+        out.parentFile.mkdirs()
+        RustUniffiPlugin::class.java.classLoader
+            .getResourceAsStream("jna-consumer-rules.pro")
+            .use { input ->
+                requireNotNull(input) { "Missing bundled resource jna-consumer-rules.pro" }
+                out.outputStream().use { input.copyTo(it) }
+            }
+    }
+    return out
+}
+
+private fun Project.configureJnaConsumerRules() {
+    val rulesFile = extractBundledJnaRules()
+
+    pluginManager.withPlugin("com.android.library") {
+        extensions.getByType(LibraryExtension::class.java)
+            .defaultConfig
+            .consumerProguardFiles(rulesFile)
+    }
+
+    pluginManager.withPlugin("com.android.kotlin.multiplatform.library") {
+        val kmp = extensions.getByType(KotlinMultiplatformExtension::class.java)
+        kmp.targets.withType(KotlinMultiplatformAndroidLibraryTarget::class.java).configureEach {
+            optimization.consumerKeepRules.apply {
+                publish = true
+                file(rulesFile)
+            }
+        }
+    }
+}
 
 class RustUniffiPlugin : Plugin<Project> {
 
@@ -155,6 +192,8 @@ class RustUniffiPlugin : Plugin<Project> {
             }.configureEach {
                 dependsOn(genUniFFIWasm)
             }
+
+            project.configureJnaConsumerRules()
         }
     }
 }
