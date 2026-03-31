@@ -1,46 +1,89 @@
-# apk-dist-plugin
+# Rust UniFFI Gradle Plugin
 
-A tiny Gradle plugin that:
-1) adjusts per-ABI APK `versionCode` offsets (so split APKs don’t collide), and
-2) copies the built APK(s) into AGP’s `build/outputs/apk/…` tree with a predictable filename.
+Eliminates Rust/UniFFI boilerplate from Kotlin Multiplatform projects.
 
-It **does not delete** or replace AGP outputs; it just copies/renames for distribution.
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-## Requirements
-- Android application module (`com.android.application`)
-- Uses the Android Components / Artifacts APIs (BuiltArtifacts metadata). 
+## Features
 
-## Apply
+- **Auto cargo builds**: Builds Rust for desktop, Android (NDK), and WASM targets
+- **UniFFI binding generation**: Generates Kotlin bindings for Android, JVM, and WASM
+- **JNA integration**: Copies native libraries to JVM resources with platform detection
+- **Convention-based**: Sensible defaults, fully overridable
+- **KMP-native**: Wires into Kotlin Multiplatform plugin automatically
 
-### Kotlin DSL (`app/build.gradle.kts`)
+## Installation
+
 ```kotlin
+// settings.gradle.kts
+pluginManagement {
+    repositories {
+        mavenCentral()
+    }
+}
+
+// Version catalog (libs.versions.toml)
+[plugins]
+rustUniffi = { id = "io.github.mlm-games.rust-uniffi", version = "0.1.0" }
+```
+
+```kotlin
+// shared/build.gradle.kts
 plugins {
-  id("io.github.mlm-games.apk-dist") version "0.x.y"
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.rustUniffi)
+}
+
+rustUniffi {
+    libraryName.set("my_ffi")
+    // Everything else uses conventions
 }
 ```
 
-## Configure (optional)
+## Usage
+
+### Required Rust structure
+
+```
+rust/
+├── Cargo.toml
+├── src/lib.rs
+├── uniffi-bindgen/Cargo.toml  (vendored uniffi-bindgen)
+├── uniffi.android.toml
+├── uniffi.jvm.toml
+└── uniffi.wasm.toml
+```
+
+### Configuration options
 
 ```kotlin
-apkDist {
-  // default: true
-  enabled.set(true)
-
-  // default: project.name
-  artifactNamePrefix.set("app")
-
-  // default: build/outputs/apk (AGP outputs tree)
-  // distDirectory.set(layout.buildDirectory.dir("outputs/apk"))
+rustUniffi {
+    libraryName.set("mages_ffi")        // Required: crate name
+    
+    // Optional overrides:
+    rustDir.set(rootProject.layout.projectDirectory.dir("rust"))
+    cargoBin.set("cargo")
+    androidAbis.set(listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86"))
+    jniOutputDir.set(layout.projectDirectory.dir("src/androidMain/jniLibs"))
+    
+    // Extra JNA patterns (e.g. ONNX Runtime)
+    jnaExtraPatterns.set(listOf("libonnxruntime*.so*"))
+    jnaExtraDirs.set(listOf("deps"))
 }
 ```
 
-## Output
-When you run `assemble<Variant>`, the plugin creates and runs a task:
-- `dist<Variant>Apks`
+### CI override for specific ABI
 
-It copies APKs to:
-- `app/build/outputs/apk/<variantName>/`
+```bash
+./gradlew assembleDebug -PtargetAbi=arm64-v8a
+```
 
-Filename format:
-- `{prefix}-{variant}-{versionName}-{abi}.apk`
-- ABI becomes `universal` when there is no ABI filter.
+## Publishing
+
+```bash
+./gradlew publishAndReleaseToMavenCentral
+```
+
+## License
+
+Apache License 2.0 - See [LICENSE](LICENSE) for details.
