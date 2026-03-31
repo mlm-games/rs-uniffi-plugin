@@ -3,6 +3,7 @@ package org.mlm.rustuniffi
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Copy
+import com.android.build.api.dsl.LibraryExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.mlm.rustuniffi.tasks.*
@@ -153,8 +154,17 @@ class RustUniffiPlugin : Plugin<Project> {
             project.tasks.matching {
                 it.name.startsWith("kspWasmJs") || it.name == "kspKotlinWasmJs"
             }.configureEach {
-                dependsOn(genUniFFIWasm)
+                dependsOn(genUniFFIWasm, cargoBuildWasm)
             }
+        }
+
+        project.pluginManager.withPlugin("com.android.library") {
+            val androidExt = project.extensions.getByType(LibraryExtension::class.java)
+            val rulesFile = project.layout.buildDirectory.file("rust-uniffi/consumer-rules.pro").get().asFile
+            rulesFile.parentFile.mkdirs()
+            javaClass.classLoader.getResourceAsStream("rust-uniffi-consumer-rules.pro")!!
+                .bufferedReader().use { rulesFile.writeText(it.readText()) }
+            androidExt.defaultConfig.consumerProguardFiles(rulesFile)
         }
     }
 }
