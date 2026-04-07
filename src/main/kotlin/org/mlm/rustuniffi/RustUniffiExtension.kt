@@ -34,6 +34,8 @@ abstract class RustUniffiExtension @Inject constructor(project: Project) {
 
     abstract val jnaExtraDirs: ListProperty<String>
 
+    abstract val cargoNdkExtraArgs: ListProperty<String>
+
     abstract val wasmUniffiConfig: RegularFileProperty
 
     init {
@@ -52,6 +54,8 @@ abstract class RustUniffiExtension @Inject constructor(project: Project) {
         jvmUniffiConfig.convention(rustDir.file("uniffi.jvm.toml"))
         jnaExtraPatterns.convention(emptyList())
         jnaExtraDirs.convention(emptyList())
+
+        cargoNdkExtraArgs.convention(emptyList())
 
         wasmUniffiConfig.convention(rustDir.file("uniffi.wasm.toml"))
     }

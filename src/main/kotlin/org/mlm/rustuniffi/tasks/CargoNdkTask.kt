@@ -24,6 +24,9 @@ abstract class CargoNdkTask @Inject constructor(
     @get:OutputDirectory
     abstract val jniOut: DirectoryProperty
 
+    @get:Input
+    abstract val extraArgs: ListProperty<String>
+
     @TaskAction
     fun build() {
         val rustDir = rustProjectDir.get().asFile
@@ -33,10 +36,14 @@ abstract class CargoNdkTask @Inject constructor(
             execOps.exec {
                 workingDir = rustDir
                 commandLine(
-                    cargoBin.get(), "ndk",
-                    "-t", abi,
-                    "-o", outDir.absolutePath,
-                    "build", "--release",
+                    buildList {
+                        add(cargoBin.get())
+                        add("ndk")
+                        addAll(listOf("-t", abi))
+                        addAll(listOf("-o", outDir.absolutePath))
+                        addAll(extraArgs.getOrElse(emptyList()))
+                        addAll(listOf("build", "--release"))
+                    }
                 )
             }
         }

@@ -72,6 +72,7 @@ class RustUniffiPlugin : Plugin<Project> {
             cargoBin.set(ext.cargoBin)
             rustProjectDir.set(ext.rustDir)
             jniOut.set(ext.jniOutputDir)
+            extraArgs.set(ext.cargoNdkExtraArgs)
         }
 
         val cargoBuildWasm = project.tasks.register("cargoBuildWasm", CargoBuildWasmTask::class.java) {
