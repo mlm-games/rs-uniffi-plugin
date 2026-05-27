@@ -60,7 +60,6 @@ class RustUniffiPlugin : Plugin<Project> {
 
         val uniffiAndroidOut = project.layout.buildDirectory.dir("generated/uniffi/androidMain/kotlin")
         val uniffiJvmOut     = project.layout.buildDirectory.dir("generated/uniffi/jvmMain/kotlin")
-        val uniffiWasmOut    = project.layout.buildDirectory.dir("generated/uniffi/wasmJsMain/kotlin")
 
         val cargoBuildDesktop = project.tasks.register("cargoBuildDesktop", CargoBuildTask::class.java) {
             cargoBin.set(ext.cargoBin)
@@ -100,16 +99,6 @@ class RustUniffiPlugin : Plugin<Project> {
             outDir.set(uniffiJvmOut)
         }
 
-        val genUniFFIWasm = project.tasks.register("genUniFFIWasm", GenerateUniFFITask::class.java) {
-            dependsOn(cargoBuildDesktop)
-            libraryFile.set(hostLibRegularFile)
-            configFile.set(ext.wasmUniffiConfig)
-            language.set("kotlin")
-            cargoBin.set(ext.cargoBin)
-            vendoredManifest.set(ext.uniffiBindgenManifest)
-            outDir.set(uniffiWasmOut)
-        }
-
         val copyNativeForJna = project.tasks.register("copyNativeForJna", Copy::class.java) {
             dependsOn(cargoBuildDesktop)
 
@@ -134,7 +123,6 @@ class RustUniffiPlugin : Plugin<Project> {
                 when (name) {
                     "androidMain" -> kotlin.srcDir(uniffiAndroidOut)
                     "jvmMain"     -> kotlin.srcDir(uniffiJvmOut)
-                    "wasmJsMain"  -> kotlin.srcDir(uniffiWasmOut)
                 }
             }
 
@@ -157,9 +145,6 @@ class RustUniffiPlugin : Plugin<Project> {
                     KotlinPlatformType.wasm -> {
                         compilations.configureEach {
                             compileTaskProvider.configure {
-                                if (ext.wasmUniffiEnabled.get()) {
-                                    dependsOn(genUniFFIWasm)
-                                }
                                 dependsOn(cargoBuildWasm)
                             }
                         }
@@ -191,14 +176,6 @@ class RustUniffiPlugin : Plugin<Project> {
             }.configureEach {
                 dependsOn(genUniFFIJvm)
             }
-            project.tasks.matching {
-                it.name.startsWith("kspWasmJs") || it.name == "kspKotlinWasmJs"
-            }.configureEach {
-                if (ext.wasmUniffiEnabled.get()) {
-                    dependsOn(genUniFFIWasm)
-                }
-            }
-
             project.configureJnaConsumerRules()
         }
     }
