@@ -157,7 +157,10 @@ class RustUniffiPlugin : Plugin<Project> {
                     KotlinPlatformType.wasm -> {
                         compilations.configureEach {
                             compileTaskProvider.configure {
-                                dependsOn(genUniFFIWasm, cargoBuildWasm)
+                                if (ext.wasmUniffiEnabled.get()) {
+                                    dependsOn(genUniFFIWasm)
+                                }
+                                dependsOn(cargoBuildWasm)
                             }
                         }
                     }
@@ -191,7 +194,9 @@ class RustUniffiPlugin : Plugin<Project> {
             project.tasks.matching {
                 it.name.startsWith("kspWasmJs") || it.name == "kspKotlinWasmJs"
             }.configureEach {
-                dependsOn(genUniFFIWasm)
+                if (ext.wasmUniffiEnabled.get()) {
+                    dependsOn(genUniFFIWasm)
+                }
             }
 
             project.configureJnaConsumerRules()

@@ -38,7 +38,10 @@ abstract class RustUniffiExtension @Inject constructor(project: Project) {
 
     abstract val wasmUniffiConfig: RegularFileProperty
 
+    abstract val wasmUniffiEnabled: Property<Boolean>
+
     init {
+        wasmUniffiEnabled.convention(false)
         rustDir.convention(rootDir.dir("rust"))
         cargoBin.convention(PlatformUtil.cargoBin)
         uniffiBindgenManifest.convention(rustDir.file("uniffi-bindgen/Cargo.toml"))
