@@ -20,6 +20,8 @@ abstract class RustUniffiExtension @Inject constructor(project: Project) {
 
     abstract val cargoBin: Property<String>
 
+    abstract val cargoHome: Property<String>
+
     abstract val uniffiBindgenManifest: RegularFileProperty
 
     abstract val androidAbis: ListProperty<String>
@@ -39,6 +41,7 @@ abstract class RustUniffiExtension @Inject constructor(project: Project) {
     init {
         rustDir.convention(rootDir.dir("rust"))
         cargoBin.convention(PlatformUtil.cargoBin)
+        cargoHome.convention(providers.provider { System.getenv("CARGO_HOME") ?: "${System.getProperty("user.home")}/.cargo" })
         uniffiBindgenManifest.convention(rustDir.file("uniffi-bindgen/Cargo.toml"))
 
         androidAbis.convention(

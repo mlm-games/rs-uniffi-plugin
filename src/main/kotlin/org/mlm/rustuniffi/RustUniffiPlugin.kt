@@ -63,12 +63,14 @@ class RustUniffiPlugin : Plugin<Project> {
 
         val cargoBuildDesktop = project.tasks.register("cargoBuildDesktop", CargoBuildTask::class.java) {
             cargoBin.set(ext.cargoBin)
+            cargoHome.set(ext.cargoHome)
             rustProjectDir.set(ext.rustDir)
         }
 
         val cargoBuildAndroid = project.tasks.register("cargoBuildAndroid", CargoNdkTask::class.java) {
             abis.set(ext.androidAbis)
             cargoBin.set(ext.cargoBin)
+            cargoHome.set(ext.cargoHome)
             rustProjectDir.set(ext.rustDir)
             jniOut.set(ext.jniOutputDir)
             extraArgs.set(ext.cargoNdkExtraArgs)
@@ -76,6 +78,7 @@ class RustUniffiPlugin : Plugin<Project> {
 
         val cargoBuildWasm = project.tasks.register("cargoBuildWasm", CargoBuildWasmTask::class.java) {
             cargoBin.set(ext.cargoBin)
+            cargoHome.set(ext.cargoHome)
             rustProjectDir.set(ext.rustDir)
         }
 
@@ -85,6 +88,7 @@ class RustUniffiPlugin : Plugin<Project> {
             configFile.set(ext.androidUniffiConfig)
             language.set("kotlin")
             cargoBin.set(ext.cargoBin)
+            cargoHome.set(ext.cargoHome)
             vendoredManifest.set(ext.uniffiBindgenManifest)
             outDir.set(uniffiAndroidOut)
         }
@@ -95,6 +99,7 @@ class RustUniffiPlugin : Plugin<Project> {
             configFile.set(ext.jvmUniffiConfig)
             language.set("kotlin")
             cargoBin.set(ext.cargoBin)
+            cargoHome.set(ext.cargoHome)
             vendoredManifest.set(ext.uniffiBindgenManifest)
             outDir.set(uniffiJvmOut)
         }

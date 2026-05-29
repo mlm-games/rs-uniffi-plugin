@@ -14,6 +14,9 @@ abstract class CargoBuildWasmTask @Inject constructor(
     @get:Input
     abstract val cargoBin: Property<String>
 
+    @get:Input
+    abstract val cargoHome: Property<String>
+
     @get:InputDirectory
     abstract val rustProjectDir: DirectoryProperty
 
@@ -21,6 +24,7 @@ abstract class CargoBuildWasmTask @Inject constructor(
     fun build() {
         execOps.exec {
             workingDir = rustProjectDir.get().asFile
+            environment("CARGO_HOME", cargoHome.get())
             commandLine(
                 cargoBin.get(), "build",
                 "--target", "wasm32-unknown-unknown",

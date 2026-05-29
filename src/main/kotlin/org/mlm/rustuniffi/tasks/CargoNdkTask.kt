@@ -18,6 +18,9 @@ abstract class CargoNdkTask @Inject constructor(
     @get:Input
     abstract val cargoBin: Property<String>
 
+    @get:Input
+    abstract val cargoHome: Property<String>
+
     @get:InputDirectory
     abstract val rustProjectDir: DirectoryProperty
 
@@ -35,6 +38,7 @@ abstract class CargoNdkTask @Inject constructor(
         abis.get().forEach { abi ->
             execOps.exec {
                 workingDir = rustDir
+                environment("CARGO_HOME", cargoHome.get())
                 commandLine(
                     buildList {
                         add(cargoBin.get())

@@ -26,6 +26,9 @@ abstract class GenerateUniFFITask @Inject constructor(
     @get:Input
     abstract val cargoBin: Property<String>
 
+    @get:Input
+    abstract val cargoHome: Property<String>
+
     @get:InputFile
     abstract val vendoredManifest: RegularFileProperty
 
@@ -56,6 +59,7 @@ abstract class GenerateUniFFITask @Inject constructor(
         outDir.get().asFile.mkdirs()
         execOps.exec {
             workingDir = manifest.parentFile
+            environment("CARGO_HOME", cargoHome.get())
             commandLine(cmd)
         }
     }
