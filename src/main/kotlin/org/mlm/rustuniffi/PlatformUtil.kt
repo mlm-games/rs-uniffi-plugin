@@ -1,6 +1,7 @@
 package org.mlm.rustuniffi
 
 import org.gradle.internal.os.OperatingSystem
+import java.io.File
 
 object PlatformUtil {
 
@@ -10,6 +11,35 @@ object PlatformUtil {
         os.isMacOsX  -> "lib${crateName}.dylib"
         os.isWindows -> "${crateName}.dll"
         else         -> "lib${crateName}.so"
+    }
+
+    /**
+     * Name of the cdylib built for Android. Independent of the build host: android targets are
+     * ELF, so cargo ndk always emits `lib<name>.so` even when building from macOS or Windows.
+     */
+    fun androidLibName(crateName: String): String = "lib${crateName}.so"
+
+    private val SECTION = Regex("""^\[([A-Za-z0-9_.-]+)]$""")
+    private val NAME = Regex("""^name\s*=\s*"([^"]+)"""")
+
+    /**
+     * The cdylib name cargo would use for [cargoToml]: `[lib] name` when present, otherwise
+     * `[package] name`. Scans the whole file so either section may appear first, and skips other
+     * sections such as `[[bin]]` so their names are not mistaken for the crate name.
+     */
+    fun crateNameFromCargoToml(cargoToml: File): String? {
+        if (!cargoToml.isFile) return null
+        var packageName: String? = null
+        var libName: String? = null
+        var section: String? = null
+        cargoToml.forEachLine { raw ->
+            val line = raw.substringBefore('#').trim()
+            SECTION.matchEntire(line)?.let { section = it.groupValues[1] }
+            if (section != "package" && section != "lib") return@forEachLine
+            val name = NAME.matchEntire(line)?.groupValues?.get(1) ?: return@forEachLine
+            if (section == "lib") libName = name else packageName = name
+        }
+        return libName ?: packageName
     }
 
     val cargoBin: String get() = if (os.isWindows) "cargo.exe" else "cargo"

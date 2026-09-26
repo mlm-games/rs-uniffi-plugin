@@ -7,10 +7,13 @@ Eliminates Rust/UniFFI boilerplate from Kotlin Multiplatform projects.
 ## Features
 
 - **Auto cargo builds**: Builds Rust for desktop, Android (NDK), and WASM targets
-- **UniFFI binding generation**: Generates Kotlin bindings for Android, JVM, and WASM
+- **UniFFI binding generation**: Generates Kotlin bindings for Android and JVM
 - **JNA integration**: Copies native libraries to JVM resources with platform detection
 - **Convention-based**: Sensible defaults, fully overridable
 - **KMP-native**: Wires into Kotlin Multiplatform plugin automatically
+
+> WASM support builds the Rust library only. Kotlin/Wasm bindings are not derived from UniFFI
+> metadata but from `wasm-bindgen`'s `.d.ts` output, which is handled outside this plugin.
 
 ## Installation
 
@@ -35,8 +38,7 @@ plugins {
 }
 
 rustUniffi {
-    libraryName.set("my_ffi")
-    // Everything else uses conventions
+    // libraryName is derived from rust/Cargo.toml, everything else uses conventions
 }
 ```
 
@@ -50,26 +52,33 @@ rust/
 ├── src/lib.rs
 ├── uniffi-bindgen/Cargo.toml  (vendored uniffi-bindgen)
 ├── uniffi.android.toml
-├── uniffi.jvm.toml
-└── uniffi.wasm.toml
+└── uniffi.jvm.toml
 ```
 
 ### Configuration options
 
 ```kotlin
 rustUniffi {
-    libraryName.set("mages_ffi")        // Required: crate name
-    
+    // Optional. Defaults to the cdylib name cargo would use for rust/Cargo.toml
+    // ([lib] name if present, otherwise [package] name).
+    libraryName.set("mages_ffi")
+
     // Optional overrides:
     rustDir.set(rootProject.layout.projectDirectory.dir("rust"))
     cargoBin.set("cargo")
     androidAbis.set(listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86"))
     jniOutputDir.set(layout.projectDirectory.dir("src/androidMain/jniLibs"))
-    
+
     // Extra JNA patterns (e.g. ONNX Runtime)
     jnaExtraPatterns.set(listOf("libonnxruntime*.so*"))
     jnaExtraDirs.set(listOf("deps"))
 }
+```
+
+`libraryName` can also be set without touching the DSL, which is useful in CI:
+
+```bash
+./gradlew assembleDebug -PffiLibName=my_ffi
 ```
 
 ### CI override for specific ABI

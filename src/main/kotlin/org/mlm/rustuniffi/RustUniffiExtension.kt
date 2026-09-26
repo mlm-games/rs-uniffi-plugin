@@ -40,6 +40,17 @@ abstract class RustUniffiExtension @Inject constructor(project: Project) {
 
     init {
         rustDir.convention(rootDir.dir("rust"))
+        libraryName.convention(
+            providers.gradleProperty("ffiLibName").orElse(
+                providers.provider {
+                    val cargoToml = rustDir.get().file("Cargo.toml").asFile
+                    PlatformUtil.crateNameFromCargoToml(cargoToml) ?: error(
+                        "Cannot determine the Rust cdylib name. Set rustUniffi.libraryName, " +
+                            "pass -PffiLibName=<name>, or declare [lib] name in $cargoToml"
+                    )
+                }
+            )
+        )
         cargoBin.convention(PlatformUtil.cargoBin)
         cargoHome.convention(providers.provider { System.getenv("CARGO_HOME") ?: "${System.getProperty("user.home")}/.cargo" })
         uniffiBindgenManifest.convention(rustDir.file("uniffi-bindgen/Cargo.toml"))

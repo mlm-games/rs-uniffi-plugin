@@ -4,6 +4,8 @@ import com.android.build.api.dsl.KotlinMultiplatformAndroidLibraryTarget
 import com.android.build.api.dsl.LibraryExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.RegularFile
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
@@ -12,15 +14,13 @@ import java.io.File
 
 private fun Project.extractBundledJnaRules(): File {
     val out = layout.buildDirectory.file("rust-uniffi/jna-consumer-rules.pro").get().asFile
-    if (!out.exists()) {
-        out.parentFile.mkdirs()
-        RustUniffiPlugin::class.java.classLoader
-            .getResourceAsStream("jna-consumer-rules.pro")
-            .use { input ->
-                requireNotNull(input) { "Missing bundled resource jna-consumer-rules.pro" }
-                out.outputStream().use { input.copyTo(it) }
-            }
-    }
+    out.parentFile.mkdirs()
+    RustUniffiPlugin::class.java.classLoader
+        .getResourceAsStream("jna-consumer-rules.pro")
+        .use { input ->
+            requireNotNull(input) { "Missing bundled resource jna-consumer-rules.pro" }
+            out.outputStream().use { input.copyTo(it) }
+        }
     return out
 }
 
@@ -51,11 +51,24 @@ class RustUniffiPlugin : Plugin<Project> {
         val ext = project.extensions.create("rustUniffi", RustUniffiExtension::class.java)
 
         val hostLibName = ext.libraryName.map { PlatformUtil.hostLibName(it) }
-        val hostLibFile = ext.rustDir.zip(hostLibName) { dir, name ->
-            dir.file("target/release/$name").asFile
-        }
+        val androidLibName = ext.libraryName.map { PlatformUtil.androidLibName(it) }
         val hostLibRegularFile = ext.rustDir.flatMap { dir ->
             hostLibName.map { name -> dir.file("target/release/$name") }
+        }
+
+        // Bindings must match the library the app loads. The host build compiles modules the
+        // android build does not (anything gated to linux/macos/windows), and JNA resolves every
+        // uniffi function eagerly, so host-derived bindings fail at UniffiLib class init.
+        val androidLibRegularFile: Provider<RegularFile> = ext.jniOutputDir.flatMap { jniOut ->
+            ext.androidAbis.flatMap { abis ->
+                project.providers.provider {
+                    abis.firstNotNullOfOrNull { abi ->
+                        jniOut.file("$abi/${androidLibName.get()}").takeIf { it.asFile.isFile }
+                    } ?: error(
+                        "no android library in $jniOut for ABIs $abis; cargoBuildAndroid must run first"
+                    )
+                }
+            }
         }
 
         val uniffiAndroidOut = project.layout.buildDirectory.dir("generated/uniffi/androidMain/kotlin")
@@ -83,8 +96,8 @@ class RustUniffiPlugin : Plugin<Project> {
         }
 
         val genUniFFIAndroid = project.tasks.register("genUniFFIAndroid", GenerateUniFFITask::class.java) {
-            dependsOn(cargoBuildDesktop)
-            libraryFile.set(hostLibRegularFile)
+            mustRunAfter(cargoBuildAndroid)
+            libraryFile.set(androidLibRegularFile)
             configFile.set(ext.androidUniffiConfig)
             language.set("kotlin")
             cargoBin.set(ext.cargoBin)
@@ -164,11 +177,6 @@ class RustUniffiPlugin : Plugin<Project> {
 
             project.tasks.matching {
                 it.name.contains("JniLibFolders") && it.name.contains("AndroidMain", ignoreCase = true)
-            }.configureEach {
-                dependsOn(cargoBuildAndroid)
-            }
-            project.tasks.matching {
-                it.name == "mergeAndroidMainJniLibFolders"
             }.configureEach {
                 dependsOn(cargoBuildAndroid)
             }
