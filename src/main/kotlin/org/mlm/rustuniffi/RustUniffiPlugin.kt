@@ -62,11 +62,8 @@ class RustUniffiPlugin : Plugin<Project> {
         val androidLibRegularFile: Provider<RegularFile> = ext.jniOutputDir.flatMap { jniOut ->
             ext.androidAbis.flatMap { abis ->
                 project.providers.provider {
-                    abis.firstNotNullOfOrNull { abi ->
-                        jniOut.file("$abi/${androidLibName.get()}").takeIf { it.asFile.isFile }
-                    } ?: error(
-                        "no android library in $jniOut for ABIs $abis; cargoBuildAndroid must run first"
-                    )
+                    val abi = abis.firstOrNull() ?: error("rustUniffi.androidAbis is empty")
+                    jniOut.file("$abi/${androidLibName.get()}")
                 }
             }
         }
@@ -96,7 +93,7 @@ class RustUniffiPlugin : Plugin<Project> {
         }
 
         val genUniFFIAndroid = project.tasks.register("genUniFFIAndroid", GenerateUniFFITask::class.java) {
-            mustRunAfter(cargoBuildAndroid)
+            dependsOn(cargoBuildAndroid)
             libraryFile.set(androidLibRegularFile)
             configFile.set(ext.androidUniffiConfig)
             language.set("kotlin")
