@@ -52,7 +52,11 @@ abstract class RustUniffiExtension @Inject constructor(project: Project) {
             )
         )
         cargoBin.convention(PlatformUtil.cargoBin)
-        cargoHome.convention(providers.provider { System.getenv("CARGO_HOME") ?: "${System.getProperty("user.home")}/.cargo" })
+        cargoHome.convention(
+            providers.gradleProperty("cargoHome")
+                .orElse(providers.provider { System.getenv("CARGO_HOME") })
+                .orElse(providers.provider { "${System.getProperty("user.home")}/.cargo" })
+        )
         uniffiBindgenManifest.convention(rustDir.file("uniffi-bindgen/Cargo.toml"))
 
         androidAbis.convention(
